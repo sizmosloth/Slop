@@ -1,4 +1,5 @@
 from datetime import datetime
+from pathlib import Path
 
 def say_hello(arg):
     if arg == "":
@@ -17,6 +18,18 @@ def exit_assistant(arg):
 def unknown(arg):
     print(f"Sorry, I don't understand ' {arg} '.")
 
+def list_files(arg):
+    folder = Path(".")  
+    for file in folder.iterdir():
+        print(file.name)
+
+def read_file(arg):
+    path = Path(arg)
+    if not path.exists():
+        print("File not found.")
+        return
+    print(path.read_text())
+
 def main ():
 
     commands = {
@@ -24,6 +37,8 @@ def main ():
         "time" : tell_time,
         "search" : search,
         "exit" : exit_assistant,
+        "list" : list_files,
+        "read" : read_file
     }
 
     while True:
