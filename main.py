@@ -1,5 +1,17 @@
 from datetime import datetime
 from pathlib import Path
+from ddgs import DDGS
+import os
+from tavily import TavilyClient
+from rich.console import Console
+from rich.panel import Panel
+console = Console()
+
+# Get the API key from environment variable of TAVILY for search response
+api_key = os.environ.get("TAVILY_API_KEY")
+
+# Initialize the Tavily client
+client = TavilyClient(api_key=api_key)
 
 def say_hello(arg):
     if arg == "":
@@ -10,8 +22,18 @@ def tell_time(arg):
     print(f"Its {current_time}")
 
 def search(arg):
-        print(f"Searching for {arg} ...")
-
+        if (arg == ""):
+            print("Please provide a search query.")
+            return
+        response = client.search(arg,max_results=3)
+        results = response["results"]
+        print(f"Search results for '{arg}':")
+        for r in results:
+            console.print(Panel(
+                f"[bold]{r['title']}[/bold]\n{r['url']}\n\n{r['content']}",
+                border_style="cyan",
+            ))
+            
 def exit_assistant(arg):
     print("Sure Master, Byeee!")
 
