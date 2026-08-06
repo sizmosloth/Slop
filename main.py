@@ -12,7 +12,9 @@ console = Console()
 # ---- Setup ----
 api_key = os.environ.get("TAVILY_API_KEY")
 client = TavilyClient(api_key=api_key)
-MODEL = "qwen2.5:0.5b"
+MODEL = "llama3.2:1b"
+
+# --- NOW AGAIN CHANGED MODEL FROM QWEN 0.5B TO LLAMA 1B ---
 
 # --- ALSO TRIED llama3.2:3b BUT NOT STABLE FOR MY PC SO SWITCHED TO 0.5B PARAMETER MODEL --- 
 
