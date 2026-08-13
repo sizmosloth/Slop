@@ -2,87 +2,139 @@ from datetime import datetime
 from pathlib import Path
 import os
 import time
+import json
 import requests
 from tavily import TavilyClient
-from rich.console import Console
-from rich.panel import Panel
-
-console = Console()
 
 # ---- Setup ----
 api_key = os.environ.get("TAVILY_API_KEY")
 client = TavilyClient(api_key=api_key)
-MODEL = "llama3.2:1b"
+MODEL = "qwen2.5:0.5b"
 
-# --- NOW AGAIN CHANGED MODEL FROM QWEN 0.5B TO LLAMA 1B ---
+MEMORY_FILE = Path("memory.json")
+MAX_HISTORY_MESSAGES = 12   # only the last N messages get sent to the model each time
 
-# --- ALSO TRIED llama3.2:3b BUT NOT STABLE FOR MY PC SO SWITCHED TO 0.5B PARAMETER MODEL --- 
 
-# ---- LLM helper ----
-def ask_llm(prompt, system=""):
-    """Send a prompt to the local Ollama model and return its text response."""
+# ---- Memory: load/save conversation history ----
+def load_memory():
+    """Load past conversation history from disk, if it exists."""
+    if MEMORY_FILE.exists():
+        try:
+            return json.loads(MEMORY_FILE.read_text())
+        except json.JSONDecodeError:
+            print("(memory file was corrupted, starting fresh)")
+            return []
+    return []
+
+
+def save_memory(history):
+    """Save the full conversation history to disk."""
+    MEMORY_FILE.write_text(json.dumps(history, indent=2))
+
+
+conversation_history = load_memory()
+
+
+# ---- LLM helper (streaming) ----
+def ask_llm(prompt, system="", num_predict=400):
+    """Stream a response from Ollama, printing each piece as it arrives."""
     response = requests.post(
         "http://localhost:11434/api/generate",
         json={
             "model": MODEL,
             "prompt": prompt,
             "system": system,
-            "stream": False,
-            "options": {"num_predict": 250}
-        }
+            "stream": True,
+            "options": {"num_predict": num_predict}
+        },
+        stream=True
     )
-    return response.json()["response"]
+
+    full_text = ""
+    for line in response.iter_lines():
+        if line:
+            chunk = json.loads(line)
+            piece = chunk.get("response", "")
+            print(piece, end="", flush=True)
+            full_text += piece
+            if chunk.get("done"):
+                break
+
+    print()
+    return full_text
+
+
+def build_prompt_with_history(new_message):
+    """Combine recent conversation history + the new message into one prompt."""
+    recent = conversation_history[-MAX_HISTORY_MESSAGES:]
+
+    prompt = ""
+    for msg in recent:
+        prompt += f"{msg['role']}: {msg['content']}\n"
+    prompt += f"user: {new_message}\nassistant:"
+    return prompt
 
 
 # ---- Search + RAG ----
 def search_and_answer(query):
-    """Search Tavily, feed results to the LLM, print a synthesized answer."""
+    """Search Tavily, feed results to the LLM, stream a synthesized answer."""
     if query == "":
         print("Search for what?")
         return
 
-    with console.status("Searching..."):
-        t0 = time.time()
-        response = client.search(query, max_results=2)
-        results = response.get("results", [])
-        console.print(f"[dim]Tavily: {time.time() - t0:.1f}s[/dim]")
+    print("Searching...")
+    t0 = time.time()
+    response = client.search(query, max_results=3, search_depth="advanced")
+    results = response.get("results", [])
+    print(f"(Tavily: {time.time() - t0:.1f}s)")
 
-        if not results:
-            console.print("[yellow]No results found.[/yellow]")
-            return
+    if not results:
+        print("No results found.")
+        return
 
-        context = ""
-        for r in results:
-            context += f"{r['title']}\n{r['content'][:400]}\n\n"
-
-        prompt = (
-            f"Context from web search:\n{context}\n\n"
-            f"Question: {query}\n\n"
-            f"Answer the question using the context above. "
-            f"Match your answer length to the question — short for simple facts, "
-            f"longer only if it truly needs explanation."
-        )
-
-    with console.status("Writing answer..."):
-        answer = ask_llm(prompt)
-
-    console.print(Panel(answer, title="Answer", border_style="green"))
+    context = ""
     for r in results:
-        console.print(Panel(f"[bold]{r['title']}[/bold]\n{r['url']}", border_style="cyan"))
+        context += f"{r['title']}\n{r['content'][:600]}\n\n"
+
+    prompt = (
+        f"Context from web search:\n{context}\n\n"
+        f"Question: {query}\n\n"
+        f"Answer the question fully and accurately using the context above. "
+        f"Match your answer length to the question — short for simple facts, "
+        f"longer and complete for anything needing explanation or code."
+    )
+
+    print("\n--- Answer ---")
+    answer = ask_llm(prompt, num_predict=800)
+
+    print("\n--- Sources ---")
+    for r in results:
+        print(f"- {r['title']}\n  {r['url']}")
+
+    # Save this exchange to memory too, so search results can be referenced later
+    conversation_history.append({"role": "user", "content": f"search {query}"})
+    conversation_history.append({"role": "assistant", "content": answer})
+    save_memory(conversation_history)
 
 
-# ---- Direct chat (no search) ----
+# ---- Direct chat (remembers past messages) ----
 def chat(query):
-    with console.status("Thinking..."):
-        answer = ask_llm(
-            query,
-            system=(
-                "You are a helpful, concise assistant. Keep casual replies short "
-                "(1-2 sentences). Give longer answers only when the question truly "
-                "needs explanation."
-            )
-        )
-    console.print(Panel(answer, border_style="magenta"))
+    prompt = build_prompt_with_history(query)
+
+    answer = ask_llm(
+        prompt,
+        system=(
+            "You are a helpful, concise assistant with memory of this conversation. "
+            "Use earlier messages to answer questions about things the user already told you. "
+            "Keep casual replies short (1-2 sentences). Give longer, complete answers only "
+            "when the question truly needs explanation or code."
+        ),
+        num_predict=500
+    )
+
+    conversation_history.append({"role": "user", "content": query})
+    conversation_history.append({"role": "assistant", "content": answer})
+    save_memory(conversation_history)
 
 
 # ---- System utility commands ----
@@ -110,6 +162,14 @@ def read_file(arg):
     print(path.read_text())
 
 
+def forget(arg):
+    """Wipe conversation memory."""
+    global conversation_history
+    conversation_history = []
+    save_memory(conversation_history)
+    print("Memory cleared.")
+
+
 # ---- Main loop ----
 def main():
     commands = {
@@ -118,7 +178,10 @@ def main():
         "list": list_files,
         "read": read_file,
         "search": search_and_answer,
+        "forget": forget,
     }
+
+    print(f"(loaded {len(conversation_history)} past messages from memory)")
 
     while True:
         raw_input_text = input("\nYou : ").strip()
@@ -132,15 +195,13 @@ def main():
 
         try:
             if cmd in commands:
-                # known command (time, exit, list, read, search) -> run it directly
                 commands[cmd](arg)
             else:
-                # anything else -> straight to the LLM, no search, no routing call
                 chat(raw_input_text)
         except requests.exceptions.ConnectionError:
-            console.print("[red]Couldn't reach Ollama. Is it running? (ollama serve)[/red]")
+            print("Couldn't reach Ollama. Is it running? (ollama serve)")
         except Exception as e:
-            console.print(f"[red]Something unusual happened: {e}[/red]")
+            print(f"Something unusual happened: {e}")
 
         if cmd == "exit":
             break
