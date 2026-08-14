@@ -1,82 +1,18 @@
 [
   {
     "role": "user",
-    "content": "hello"
+    "content": "search ollama"
   },
   {
     "role": "assistant",
-    "content": "Hello! How can I assist you today?"
+    "content": "Ollama is a self-hosted language model platform that allows users to process their personal monthly credit card statements locally on their machine without relying on external services like AWS. It also provides an agent task functionality similar to GitHub Copilot for JetBrains. Ollama supports different apps and harnesses, making it suitable for various productivity tasks including image editing, text generation, and more."
   },
   {
     "role": "user",
-    "content": "my name is samay"
+    "content": "clear"
   },
   {
     "role": "assistant",
-    "content": "Hello Samay! Nice to meet you. What would you like help with today?"
-  },
-  {
-    "role": "user",
-    "content": "what is my name"
-  },
-  {
-    "role": "assistant",
-    "content": "Your name is Samay."
-  },
-  {
-    "role": "user",
-    "content": "hello"
-  },
-  {
-    "role": "assistant",
-    "content": "Hello, Samay! Is there something specific you'd like to discuss or ask about?"
-  },
-  {
-    "role": "user",
-    "content": "open up"
-  },
-  {
-    "role": "assistant",
-    "content": "I'm now ready to answer your question. If you have any more questions, feel free to say so."
-  },
-  {
-    "role": "user",
-    "content": "search youtube"
-  },
-  {
-    "role": "assistant",
-    "content": "The YouTube platform is a video-sharing website that allows users to upload and share multimedia content such as videos. The platform was launched on May 20, 2005, by Google as part of its YouTube initiative. At the time of its launch, YouTube served around two million daily views.\n\nIn early 2018, YouTube began a major expansion effort aimed at hosting more than one billion monthly users globally. As part of this expansion, the platform added features such as social media integration and personalized recommendations for video recommendations.\n\nYouTube has seen significant growth since its inception with millions of users worldwide. It is currently serving over 3 billion daily active users across nearly every country in the world. The platform boasts a user base estimated at over 200 million monthly unique viewers globally.\n[...]\n\nIn addition to video uploading and sharing, YouTube also offers features such as live streaming, offline viewing, and search functionality. The platform has been instrumental in popularizing video-sharing culture on the internet and is often cited as an early pioneer of social media platforms like Facebook, Twitter, and Instagram.\n\nYouTube's user interface has evolved over time, with various updates to improve search functions, image uploads, and other features. These changes are designed to enhance the user experience by providing more interactive content and making it easier for users to find what they're looking for.\n[...]\n\nIn summary, YouTube is a video-sharing platform that has experienced rapid growth through expansion into new regions and features such as social media integration and personalized recommendations. The company has also made significant improvements in various areas of its user interface and features, ensuring an engaging and useful experience for users worldwide."
-  },
-  {
-    "role": "user",
-    "content": "search how to cook rice"
-  },
-  {
-    "role": "assistant",
-    "content": "To cook rice, follow these steps:\n\n1. Rinse the rice until it runs almost clear and remove any remaining water.\n2. Fill a pot with water using a 1:2 ratio of water to the amount of rice you have rinsed (e.g., add 4 cups of water for every cup of rice).\n3. Add salt, oil, and cover the pot with a kitchen towel. Place it over the towel, cover the towel tightly, and place the lid on top.\n4. Bring the mixture to a boil and cook until the water has almost evaporated (usually takes 50-60 minutes for white rice), then lower the heat to a simmer.\n\nAdditional tips:\n- If using a pan with a handle, add it after opening the lid for easy peeling of the dish.\n- Some cooks prefer to remove the cooking utensils and return them to the pot afterwards."
-  },
-  {
-    "role": "user",
-    "content": "Who are u?"
-  },
-  {
-    "role": "assistant",
-    "content": "I'm an AI assistant here at ChatGPT. I don't have personal information or a defined \"self.\" However, my purpose is to provide helpful responses based on publicly available data and knowledge from my training. If you need assistance with anything specific today, feel free to ask!"
-  },
-  {
-    "role": "user",
-    "content": "search what is chatgpt?"
-  },
-  {
-    "role": "assistant",
-    "content": "ChatGPT is a generative AI chatbot developed by OpenAI that uses large language models\u2014specifically pre-trained transformers\u2014to generate text, speech, and images in response to user prompts. It accelerates the AI boom by enabling rapid investment and public attention on artificial intelligence (AI). OPENAI operates the service with a freemium model. Users can interact with ChatGPT through text, audio, and image prompts."
-  },
-  {
-    "role": "user",
-    "content": "search how to make cup noodles?"
-  },
-  {
-    "role": "assistant",
-    "content": "To make instant noodle cups, follow these steps:\n1. Fill a mason jar with vegetables: Decide on the types of vegetables you want in your noodles (carrots, peas, tofu, noodles, greens) and select them carefully.\n2. Add noodles to the jar: Place the selected vegetables into the empty side of the jar, leaving some space between each vegetable for proper alignment.\n3. Fill the jar with water: Pour a generous amount of boiling water over the vegetables until they are submerged, but not completely covered. This helps create the \"instant\" effect without filling up the whole jar.\n4. Add toppings: Choose toppings that complement your chosen vegetables and fill the jar with them, making sure to mix the colors evenly.\n5. Close the jar: Ensure all the toppings are in place before covering the jar tightly with a lid or plastic wrap.\n6. Place the jar on a plate or table: Arrange the jar on a flat surface for easy access while cooking and serving.\n\nEnjoy your delicious instant noodles!"
+    "content": "Ollama is a language model platform that processes personal monthly credit card statements locally on the user's machine using their device's hardware. It allows users to engage in a variety of productive tasks without relying on external services such as AWS or GitHub Copilot for JetBrains."
   }
 ]
