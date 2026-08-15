@@ -14,6 +14,14 @@ MODEL = "qwen2.5:0.5b"
 MEMORY_FILE = Path("memory.json")
 MAX_HISTORY_MESSAGES = 12   # only the last N messages get sent to the model each time
 
+SYSTEM_PROMPT = (
+    "You are Slop, a helpful personal assistant running locally on the user's computer. "
+    "You have memory of this conversation across sessions. Use earlier messages to answer "
+    "questions about things the user already told you. Keep casual replies short "
+    "(1-2 sentences). Give longer, complete answers only when the question truly needs "
+    "explanation or code. If you don't know something, say so honestly instead of guessing."
+)
+
 
 # ---- Memory: load/save conversation history ----
 def load_memory():
@@ -35,44 +43,44 @@ def save_memory(history):
 conversation_history = load_memory()
 
 
-# ---- LLM helper (streaming) ----
-def ask_llm(prompt, system="", num_predict=400):
-    """Stream a response from Ollama, printing each piece as it arrives."""
+# ---- LLM helper (streaming, using /api/chat) ----
+def ask_llm(messages, num_predict=400):
+    """
+    Send a list of {"role", "content"} messages to Ollama's chat endpoint,
+    stream the reply, print it live, and return the full text.
+    """
+    print("Slop: ", end="", flush=True)
+
     response = requests.post(
-        "http://localhost:11434/api/generate",
+        "http://localhost:11434/api/chat",
         json={
             "model": MODEL,
-            "prompt": prompt,
-            "system": system,
+            "messages": messages,
             "stream": True,
             "options": {"num_predict": num_predict}
         },
-        stream=True
+        stream=True,
+        timeout=60
     )
 
     full_text = ""
     for line in response.iter_lines():
-        if line:
+        if not line:
+            continue
+        try:
             chunk = json.loads(line)
-            piece = chunk.get("response", "")
-            print(piece, end="", flush=True)
-            full_text += piece
-            if chunk.get("done"):
-                break
+        except json.JSONDecodeError:
+            continue
+
+        piece = chunk.get("message", {}).get("content", "")
+        print(piece, end="", flush=True)
+        full_text += piece
+
+        if chunk.get("done"):
+            break
 
     print()
     return full_text
-
-
-def build_prompt_with_history(new_message):
-    """Combine recent conversation history + the new message into one prompt."""
-    recent = conversation_history[-MAX_HISTORY_MESSAGES:]
-
-    prompt = ""
-    for msg in recent:
-        prompt += f"{msg['role']}: {msg['content']}\n"
-    prompt += f"user: {new_message}\nassistant:"
-    return prompt
 
 
 # ---- Search + RAG ----
@@ -96,7 +104,7 @@ def search_and_answer(query):
     for r in results:
         context += f"{r['title']}\n{r['content'][:600]}\n\n"
 
-    prompt = (
+    user_prompt = (
         f"Context from web search:\n{context}\n\n"
         f"Question: {query}\n\n"
         f"Answer the question fully and accurately using the context above. "
@@ -104,14 +112,18 @@ def search_and_answer(query):
         f"longer and complete for anything needing explanation or code."
     )
 
-    print("\n--- Answer ---")
-    answer = ask_llm(prompt, num_predict=800)
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    print("--- Answer ---")
+    answer = ask_llm(messages, num_predict=800)
 
     print("\n--- Sources ---")
     for r in results:
         print(f"- {r['title']}\n  {r['url']}")
 
-    # Save this exchange to memory too, so search results can be referenced later
     conversation_history.append({"role": "user", "content": f"search {query}"})
     conversation_history.append({"role": "assistant", "content": answer})
     save_memory(conversation_history)
@@ -119,18 +131,12 @@ def search_and_answer(query):
 
 # ---- Direct chat (remembers past messages) ----
 def chat(query):
-    prompt = build_prompt_with_history(query)
+    recent = conversation_history[-MAX_HISTORY_MESSAGES:]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + recent + [
+        {"role": "user", "content": query}
+    ]
 
-    answer = ask_llm(
-        prompt,
-        system=(
-            "You are a helpful, concise assistant with memory of this conversation. "
-            "Use earlier messages to answer questions about things the user already told you. "
-            "Keep casual replies short (1-2 sentences). Give longer, complete answers only "
-            "when the question truly needs explanation or code."
-        ),
-        num_predict=500
-    )
+    answer = ask_llm(messages, num_predict=500)
 
     conversation_history.append({"role": "user", "content": query})
     conversation_history.append({"role": "assistant", "content": answer})
@@ -170,6 +176,20 @@ def forget(arg):
     print("Memory cleared.")
 
 
+def show_memory(arg):
+    """Show what's currently remembered."""
+    if not conversation_history:
+        print("No memory saved yet.")
+        return
+    for msg in conversation_history[-MAX_HISTORY_MESSAGES:]:
+        print(f"[{msg['role']}] {msg['content'][:100]}")
+
+
+def show_help(arg):
+    print("Commands: time, list, read <file>, search <query>, forget, memory, help, exit")
+    print("Anything else is sent straight to Slop as a normal message.")
+
+
 # ---- Main loop ----
 def main():
     commands = {
@@ -179,9 +199,12 @@ def main():
         "read": read_file,
         "search": search_and_answer,
         "forget": forget,
+        "memory": show_memory,
+        "help": show_help,
     }
 
     print(f"(loaded {len(conversation_history)} past messages from memory)")
+    print("Type 'help' to see available commands.")
 
     while True:
         raw_input_text = input("\nYou : ").strip()
@@ -200,6 +223,8 @@ def main():
                 chat(raw_input_text)
         except requests.exceptions.ConnectionError:
             print("Couldn't reach Ollama. Is it running? (ollama serve)")
+        except requests.exceptions.Timeout:
+            print("Ollama took too long to respond. Try again.")
         except Exception as e:
             print(f"Something unusual happened: {e}")
 
