@@ -9,7 +9,7 @@ from tavily import TavilyClient
 # ---- Setup ----
 api_key = os.environ.get("TAVILY_API_KEY")
 client = TavilyClient(api_key=api_key)
-MODEL = "qwen2.5:0.5b"
+MODEL = "qwen2.5:1.5b"
 
 MEMORY_FILE = Path("memory.json")
 MAX_HISTORY_MESSAGES = 12   # only the last N messages get sent to the model each time
