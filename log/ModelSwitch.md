@@ -7,6 +7,7 @@
 - It was Halucinating on RAG as well as normal prompts
 
 ```
+** Changes to: **
 
 ```
 - Switched to a bigger parameter count model qwen2.5:1.5b
