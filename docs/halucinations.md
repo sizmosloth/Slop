@@ -1,13 +1,24 @@
-** Qwen Halucinations **
+# Qwen Hallucinations
 
-```
--`qwen2.5:0.5b` was halucinating and not properly giving its identity.
-Maybe because of its a chinese model made by alibaba and trained on 0.5b parameters.
+## What happened
+`qwen2.5:0.5b` sometimes gave the wrong name for itself, and later
+forgot the user's name even though it had answered correctly before.
 
--After making memory.json to retrieve data from previous prompts but failing to remember name.
+## What we thought caused it
+- Being a Chinese/Alibaba model
+- A bug in how memory.json stores data
 
--Maybe the halucinations are because of how the data is being stored in the json file.
+## What actually caused it
+Checked memory.json directly — the data was saved correctly, so storage
+wasn't the problem. The real cause is model size: `qwen2.5:0.5b` is only
+0.5B parameters, which is too small to reliably find one fact inside a
+growing conversation history. It gets it right sometimes, wrong other
+times, and once it gives a bad answer, that bad answer gets saved too —
+so mistakes pile up over a session.
 
--Currently the llm is reading the previous chats and give the response from them and by itself like a RAG model
-
-```
+## What we learned
+- Hallucination comes from model size, not the model's origin/language.
+- Re-reading the whole chat history isn't reliable memory for a small model.
+- Fix: pull out key facts (like name) with simple code the moment they're
+  said, save them separately, and tell the model directly instead of
+  making it search old messages for them.
